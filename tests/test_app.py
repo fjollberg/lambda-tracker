@@ -18,18 +18,12 @@ start_time = datetime.now().replace(microsecond=0)
 
 
 @pytest.fixture(scope="module")
-def db():
-    engine = create_engine('sqlite:///{0}/test.db'.format(os. getcwd()))
-    LogEntry.metadata.create_all(engine)
-    Session = sessionmaker(bind = engine)
-
-    yield Session()
-
-    LogEntry.metadata.drop_all(engine)
+def setup():
+    yield
     os.remove("test.db")
 
 
-def test_bad_path_gives_404(db):
+def test_bad_path_gives_404(setup):
     request = {
         "path": "/random-path",
         "headers": {}
@@ -40,7 +34,7 @@ def test_bad_path_gives_404(db):
     assert response['statusCode'] == 404
 
 
-def test_tracker_with_no_referer_gives_no_cookie(db):
+def test_tracker_with_no_referer_gives_no_cookie(setup):
     request = {
         "path": "/tracker.gif",
         "headers": {}
@@ -56,7 +50,7 @@ def test_tracker_with_no_referer_gives_no_cookie(db):
     assert 'cookies' not in response['headers']
 
 
-def test_tracker_with_referer_gives_cookie(db):
+def test_tracker_with_referer_gives_cookie(setup):
     request = {
         "path": "/tracker.gif",
         "referer": "http://localhost/random_url",
@@ -73,7 +67,7 @@ def test_tracker_with_referer_gives_cookie(db):
     assert 'cookie' in response['headers']
 
 
-def test_tracker_with_cookie_returns_same_cookie(db):
+def test_tracker_with_cookie_returns_same_cookie(setup):
     request = {
         "path": "/tracker.gif",
         "referer": "http://localhost/random_url",
@@ -94,7 +88,7 @@ def test_tracker_with_cookie_returns_same_cookie(db):
     assert response['headers']['cookie'] == 'userid=foobar'
 
 
-def test_tracker_with_bad_cookie_returns_new_cookie(db):
+def test_tracker_with_bad_cookie_returns_new_cookie(setup):
     request = {
         "path": "/tracker.gif",
         "referer": "http://localhost/random_url",
@@ -112,4 +106,4 @@ def test_tracker_with_bad_cookie_returns_new_cookie(db):
     assert 'body' in response
     print(response)
     assert 'cookie' in response['headers']
-    assert response['headers']['cookie'] != 'xxx=foobar'
+    assert response['headers']['cookie'] != 'userid=foobar'
