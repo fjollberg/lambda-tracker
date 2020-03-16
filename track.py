@@ -191,8 +191,7 @@ def track(event, context):
     db.add(log)
     db.commit()
 
-    response['headers']['set-cookie'] = 'userid={0};domain={1}'.format(
-        userid, ".fjollberg.se")
+    response['headers']['set-cookie'] = 'userid={0}'.format(userid)
 
     return response
 

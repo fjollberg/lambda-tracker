@@ -10,10 +10,9 @@ from sqlalchemy import Column, DateTime, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from track import LogEntry, formatted_timestamp, lambda_handler
-
 # Hack to add top directory to python path to find tracker_server.
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from track import LogEntry, formatted_timestamp, lambda_handler
 
 
 start_time = datetime.now().replace(microsecond=0)
@@ -49,7 +48,7 @@ def test_tracker_with_no_referer_gives_no_cookie(setup):
     assert response['headers']['Content-Type'] == 'image/gif'
     assert response['isBase64Encoded'] == True
     assert 'body' in response
-    assert 'cookies' not in response['headers']
+    assert 'set-cookie' not in response['headers']
 
 
 def test_tracker_with_referer_gives_cookie(setup):
@@ -67,7 +66,7 @@ def test_tracker_with_referer_gives_cookie(setup):
     assert response['headers']['Content-Type'] == 'image/gif'
     assert response['isBase64Encoded'] == True
     assert 'body' in response
-    assert 'cookie' in response['headers']
+    assert 'set-cookie' in response['headers']
 
 
 def test_tracker_with_cookie_returns_same_cookie(setup):
@@ -86,8 +85,8 @@ def test_tracker_with_cookie_returns_same_cookie(setup):
     assert response['headers']['Content-Type'] == 'image/gif'
     assert response['isBase64Encoded'] == True
     assert 'body' in response
-    assert 'cookie' in response['headers']
-    assert response['headers']['cookie'] == 'userid=foobar'
+    assert 'set-cookie' in response['headers']
+    assert response['headers']['set-cookie'] == 'userid=foobar'
 
 
 def test_tracker_with_bad_cookie_returns_new_cookie(setup):
@@ -106,8 +105,8 @@ def test_tracker_with_bad_cookie_returns_new_cookie(setup):
     assert response['headers']['Content-Type'] == 'image/gif'
     assert response['isBase64Encoded'] == True
     assert 'body' in response
-    assert 'cookie' in response['headers']
-    assert response['headers']['cookie'] != 'userid=foobar'
+    assert 'set-cookie' in response['headers']
+    assert response['headers']['set-cookie'] != 'userid=foobar'
 
 
 def test_log(setup):
