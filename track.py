@@ -1,13 +1,14 @@
 import json
 import os
 import uuid
-
 from datetime import datetime, timezone
 from http.cookies import SimpleCookie
-from sqlalchemy import create_engine, Column, DateTime, Integer, String
+from urllib.parse import unquote, urlparse
+
+from sqlalchemy import Column, DateTime, Integer, String, create_engine, distinct, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from urllib.parse import unquote, urlparse
+
 
 class LogEntry(declarative_base()):
 	__tablename__ = 'log'
@@ -59,8 +60,6 @@ def home(event, context):
 def extract_datetime_parameters(event):
 	from_datetime = to_datetime = None
 
-	print(event)
-
 	from_timestamp = event['queryStringParameters'].get('from', None)
 	if from_timestamp is not None:
 		from_datetime = datetime.fromisoformat(unquote(from_timestamp)).astimezone(timezone.utc)
@@ -107,8 +106,43 @@ def log(event, context):
 def report(event, context):
 	response = {
 		"statusCode": 200,
-		"statusDescription": "200 OK"
+		"statusDescription": "200 OK",
+		"headers": {
+			"Content-Type": "application/json"
+		}
 	}
+
+	from_datetime, to_datetime = extract_datetime_parameters(event)
+
+	if (from_datetime, to_datetime) == (None, None):
+		res = db.query(LogEntry.url,
+			func.count(LogEntry.url), func.count(distinct(LogEntry.userid))).group_by(LogEntry.url).all()
+
+	elif to_datetime is None:
+		res = db.query(LogEntry.url,
+			func.count(LogEntry.url),
+			func.count(distinct(LogEntry.userid))
+		).filter(LogEntry.timestamp >= from_datetime).group_by(LogEntry.url).all()
+
+	elif from_datetime is None:
+		res = db.query(LogEntry.url,
+			func.count(LogEntry.url),
+			func.count(distinct(LogEntry.userid))
+		).filter(LogEntry.timestamp <= to_datetime).group_by(LogEntry.url).all()
+
+	else:
+		from sqlalchemy import and_
+		res = db.query(LogEntry.url,
+			func.count(LogEntry.url),
+			func.count(distinct(LogEntry.userid))
+		).filter(
+			and_(
+				LogEntry.timestamp >= from_datetime,
+				LogEntry.timestamp <= to_datetime)
+		).group_by(LogEntry.url).all()
+
+	response['body'] = json.dumps([{'url': r[0], 'page views': r[1], 'visitors': r[2]} for r in res])
+
 	return response
 
 
@@ -152,7 +186,7 @@ def track(event, context):
 	db.add(log)
 	db.commit()
 
-	response['headers']['cookie'] = 'userid={0}'.format(userid)
+	response['headers']['set-cookie'] = 'userid={0};domain={1}'.format(userid, ".fjollberg.se")
 
 	return response
 

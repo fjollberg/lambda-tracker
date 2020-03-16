@@ -1,18 +1,19 @@
 import json
 import os
-import pytest
 import sys
 import uuid
-
 from datetime import datetime
+from urllib.parse import quote, urlparse
+
+import pytest
 from sqlalchemy import Column, DateTime, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from urllib.parse import quote, urlparse
+
+from track import LogEntry, formatted_timestamp, lambda_handler
 
 # Hack to add top directory to python path to find tracker_server.
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from track import LogEntry, lambda_handler, formatted_timestamp
 
 
 start_time = datetime.now().replace(microsecond=0)
@@ -85,7 +86,6 @@ def test_tracker_with_cookie_returns_same_cookie(setup):
     assert response['headers']['Content-Type'] == 'image/gif'
     assert response['isBase64Encoded'] == True
     assert 'body' in response
-    print(response)
     assert 'cookie' in response['headers']
     assert response['headers']['cookie'] == 'userid=foobar'
 
@@ -148,3 +148,65 @@ def test_log_with_from_parameter(setup):
     assert 'body' in response
     data = json.loads(response['body'])
     assert len(data) == 3
+
+
+def test_log_with_to_parameter(setup):
+    """Verify that we can get a log to specific datetime"""
+
+    request = {
+        "path": "/log",
+        "queryStringParameters": {
+            "to": quote(formatted_timestamp(datetime.now()))
+        }
+    }
+
+    response = lambda_handler(request, None)
+
+    assert 'statusCode' in response 
+    assert response['statusCode'] == 200
+    assert 'Content-Type' in response['headers']
+    assert response['headers']['Content-Type'] == 'application/json'
+    assert 'body' in response
+    data = json.loads(response['body'])
+    assert len(data) == 3
+
+
+def test_log_with_from_and_to_parameters(setup):
+    """Verify that we can get a log with both to and from parameters"""
+
+    request = {
+        "path": "/log",
+        "queryStringParameters": {
+            "from": quote(formatted_timestamp(start_time)),
+            "to": quote(formatted_timestamp(datetime.now()))
+        }
+    }
+
+    response = lambda_handler(request, None)
+
+    assert 'statusCode' in response 
+    assert response['statusCode'] == 200
+    assert 'Content-Type' in response['headers']
+    assert response['headers']['Content-Type'] == 'application/json'
+    assert 'body' in response
+    data = json.loads(response['body'])
+    assert len(data) == 3
+
+
+def test_report(setup):
+    """Verify that we can get a report"""
+
+    request = {
+        "path": "/report",
+        "queryStringParameters": {}
+    }
+
+    response = lambda_handler(request, None)
+
+    assert 'statusCode' in response 
+    assert response['statusCode'] == 200
+    assert 'Content-Type' in response['headers']
+    assert response['headers']['Content-Type'] == 'application/json'
+    assert 'body' in response
+    data = json.loads(response['body'])
+    assert len(data) == 1
