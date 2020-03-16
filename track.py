@@ -1,5 +1,5 @@
+import json
 import os
-import urllib
 import uuid
 
 from datetime import datetime, timezone
@@ -7,7 +7,7 @@ from http.cookies import SimpleCookie
 from sqlalchemy import create_engine, Column, DateTime, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-
+from urllib.parse import unquote, urlparse
 
 class LogEntry(declarative_base()):
 	__tablename__ = 'log'
@@ -56,11 +56,51 @@ def home(event, context):
 	return response
 
 
+def extract_datetime_parameters(event):
+	from_datetime = to_datetime = None
+
+	print(event)
+
+	from_timestamp = event['queryStringParameters'].get('from', None)
+	if from_timestamp is not None:
+		from_datetime = datetime.fromisoformat(unquote(from_timestamp)).astimezone(timezone.utc)
+
+	to_timestamp = event['queryStringParameters'].get('to', None)
+	if to_timestamp is not None:
+		to_datetime = datetime.fromisoformat(unquote(to_timestamp)).astimezone(timezone.utc)
+
+	return from_datetime, to_datetime
+
+
 def log(event, context):
 	response = {
 		"statusCode": 200,
-		"statusDescription": "200 OK"
+		"statusDescription": "200 OK",
+		"headers": {
+			"Content-Type": "application/json"
+		}
 	}
+
+	from_datetime, to_datetime = extract_datetime_parameters(event)
+
+	if (from_datetime, to_datetime) == (None, None):
+		logs = db.query(LogEntry).all()
+
+	elif to_datetime is None:
+		logs = db.query(LogEntry).filter(LogEntry.timestamp >= from_datetime).all()
+
+	elif from_datetime is None:
+		logs = db.query(LogEntry).filter(LogEntry.timestamp <= to_datetime).all()
+
+	else:
+		from sqlalchemy import and_
+		logs = db.query(LogEntry).filter(
+			and_(
+				LogEntry.timestamp >= from_datetime,
+				LogEntry.timestamp <= to_datetime)).all()
+
+	response['body'] = json.dumps([l.serialize() for l in logs])
+
 	return response
 
 
@@ -75,8 +115,8 @@ def report(event, context):
 def get_tracker_data_from_event(event):
 	referrer = userid = None
 
-	if 'referer' in event:
-		referrer = urllib.parse.urlparse(event['referer']).path
+	if 'referer' in event['headers']:
+		referrer = urlparse(event['headers']['referer']).path
     
 	if 'cookie' in event['headers']:
 		cookie = SimpleCookie(event['headers']['cookie'])

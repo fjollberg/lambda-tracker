@@ -1,17 +1,18 @@
 import json
 import os
+import pytest
 import sys
 import uuid
-from datetime import datetime
 
-import pytest
+from datetime import datetime
 from sqlalchemy import Column, DateTime, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from urllib.parse import quote, urlparse
 
 # Hack to add top directory to python path to find tracker_server.
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from track import LogEntry, lambda_handler
+from track import LogEntry, lambda_handler, formatted_timestamp
 
 
 start_time = datetime.now().replace(microsecond=0)
@@ -53,8 +54,9 @@ def test_tracker_with_no_referer_gives_no_cookie(setup):
 def test_tracker_with_referer_gives_cookie(setup):
     request = {
         "path": "/tracker.gif",
-        "referer": "http://localhost/random_url",
-        "headers": {}
+        "headers": {
+            "referer": "http://localhost/random_url"
+        }
     }
     response = lambda_handler(request, None)
 
@@ -70,8 +72,8 @@ def test_tracker_with_referer_gives_cookie(setup):
 def test_tracker_with_cookie_returns_same_cookie(setup):
     request = {
         "path": "/tracker.gif",
-        "referer": "http://localhost/random_url",
         "headers": {
+            "referer": "http://localhost/random_url",
             "cookie": "userid=foobar"
         }
     }
@@ -91,8 +93,8 @@ def test_tracker_with_cookie_returns_same_cookie(setup):
 def test_tracker_with_bad_cookie_returns_new_cookie(setup):
     request = {
         "path": "/tracker.gif",
-        "referer": "http://localhost/random_url",
         "headers": {
+            "referer": "http://localhost/random_url",
             "cookie": "xxx=foobar"
         }
     }
@@ -104,6 +106,45 @@ def test_tracker_with_bad_cookie_returns_new_cookie(setup):
     assert response['headers']['Content-Type'] == 'image/gif'
     assert response['isBase64Encoded'] == True
     assert 'body' in response
-    print(response)
     assert 'cookie' in response['headers']
     assert response['headers']['cookie'] != 'userid=foobar'
+
+
+def test_log(setup):
+    """Verify that we can get the complete log"""
+
+    request = {
+        "path": "/log",
+        "queryStringParameters": {}
+    }
+
+    response = lambda_handler(request, None)
+
+    assert 'statusCode' in response 
+    assert response['statusCode'] == 200
+    assert 'Content-Type' in response['headers']
+    assert response['headers']['Content-Type'] == 'application/json'
+    assert 'body' in response
+    data = json.loads(response['body'])
+    assert len(data) == 3
+
+
+def test_log_with_from_parameter(setup):
+    """Verify that we can get a log from specific datetime"""
+
+    request = {
+        "path": "/log",
+        "queryStringParameters": {
+            "from": quote(formatted_timestamp(start_time))
+        }
+    }
+
+    response = lambda_handler(request, None)
+
+    assert 'statusCode' in response 
+    assert response['statusCode'] == 200
+    assert 'Content-Type' in response['headers']
+    assert response['headers']['Content-Type'] == 'application/json'
+    assert 'body' in response
+    data = json.loads(response['body'])
+    assert len(data) == 3
