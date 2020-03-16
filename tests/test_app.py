@@ -32,7 +32,7 @@ def test_bad_path_gives_404(setup):
     }
     response = lambda_handler(request, None)
 
-    assert 'statusCode' in response 
+    assert 'statusCode' in response
     assert response['statusCode'] == 404
 
 
@@ -43,7 +43,7 @@ def test_tracker_with_no_referer_gives_no_cookie(setup):
     }
     response = lambda_handler(request, None)
 
-    assert 'statusCode' in response 
+    assert 'statusCode' in response
     assert response['statusCode'] == 200
     assert 'Content-Type' in response['headers']
     assert response['headers']['Content-Type'] == 'image/gif'
@@ -61,7 +61,7 @@ def test_tracker_with_referer_gives_cookie(setup):
     }
     response = lambda_handler(request, None)
 
-    assert 'statusCode' in response 
+    assert 'statusCode' in response
     assert response['statusCode'] == 200
     assert 'Content-Type' in response['headers']
     assert response['headers']['Content-Type'] == 'image/gif'
@@ -80,7 +80,7 @@ def test_tracker_with_cookie_returns_same_cookie(setup):
     }
     response = lambda_handler(request, None)
 
-    assert 'statusCode' in response 
+    assert 'statusCode' in response
     assert response['statusCode'] == 200
     assert 'Content-Type' in response['headers']
     assert response['headers']['Content-Type'] == 'image/gif'
@@ -100,7 +100,7 @@ def test_tracker_with_bad_cookie_returns_new_cookie(setup):
     }
     response = lambda_handler(request, None)
 
-    assert 'statusCode' in response 
+    assert 'statusCode' in response
     assert response['statusCode'] == 200
     assert 'Content-Type' in response['headers']
     assert response['headers']['Content-Type'] == 'image/gif'
@@ -120,7 +120,7 @@ def test_log(setup):
 
     response = lambda_handler(request, None)
 
-    assert 'statusCode' in response 
+    assert 'statusCode' in response
     assert response['statusCode'] == 200
     assert 'Content-Type' in response['headers']
     assert response['headers']['Content-Type'] == 'application/json'
@@ -141,7 +141,7 @@ def test_log_with_from_parameter(setup):
 
     response = lambda_handler(request, None)
 
-    assert 'statusCode' in response 
+    assert 'statusCode' in response
     assert response['statusCode'] == 200
     assert 'Content-Type' in response['headers']
     assert response['headers']['Content-Type'] == 'application/json'
@@ -162,7 +162,7 @@ def test_log_with_to_parameter(setup):
 
     response = lambda_handler(request, None)
 
-    assert 'statusCode' in response 
+    assert 'statusCode' in response
     assert response['statusCode'] == 200
     assert 'Content-Type' in response['headers']
     assert response['headers']['Content-Type'] == 'application/json'
@@ -184,7 +184,7 @@ def test_log_with_from_and_to_parameters(setup):
 
     response = lambda_handler(request, None)
 
-    assert 'statusCode' in response 
+    assert 'statusCode' in response
     assert response['statusCode'] == 200
     assert 'Content-Type' in response['headers']
     assert response['headers']['Content-Type'] == 'application/json'
@@ -203,7 +203,7 @@ def test_report(setup):
 
     response = lambda_handler(request, None)
 
-    assert 'statusCode' in response 
+    assert 'statusCode' in response
     assert response['statusCode'] == 200
     assert 'Content-Type' in response['headers']
     assert response['headers']['Content-Type'] == 'application/json'
