@@ -50,11 +50,11 @@ def formatted_timestamp(timestamp):
 
 
 def home(event, context):
-    response = {
+    return {
         "statusCode": 200,
-        "statusDescription": "200 OK"
+        "statusDescription": "200 OK",
+        "body": ""
     }
-    return response
 
 
 def extract_datetime_parameters(event):
@@ -74,14 +74,6 @@ def extract_datetime_parameters(event):
 
 
 def log(event, context):
-    response = {
-        "statusCode": 200,
-        "statusDescription": "200 OK",
-        "headers": {
-            "Content-Type": "application/json"
-        }
-    }
-
     from_datetime, to_datetime = extract_datetime_parameters(event)
 
     if (from_datetime, to_datetime) == (None, None):
@@ -102,20 +94,17 @@ def log(event, context):
                 LogEntry.timestamp >= from_datetime,
                 LogEntry.timestamp <= to_datetime)).all()
 
-    response['body'] = json.dumps([l.serialize() for l in logs])
-
-    return response
-
-
-def report(event, context):
-    response = {
+    return {
         "statusCode": 200,
         "statusDescription": "200 OK",
         "headers": {
             "Content-Type": "application/json"
-        }
+        },
+        "body": json.dumps([l.serialize() for l in logs])
     }
 
+
+def report(event, context):
     from_datetime, to_datetime = extract_datetime_parameters(event)
 
     if (from_datetime, to_datetime) == (None, None):
@@ -145,10 +134,14 @@ def report(event, context):
                 LogEntry.timestamp <= to_datetime)
         ).group_by(LogEntry.url).all()
 
-    response['body'] = json.dumps(
-        [{'url': r[0], 'page views': r[1], 'visitors': r[2]} for r in res])
-
-    return response
+    return {
+        "statusCode": 200,
+        "statusDescription": "200 OK",
+        "headers": {
+            "Content-Type": "application/json",
+        },
+        "body": json.dumps([{'url': r[0], 'page views': r[1], 'visitors': r[2]} for r in res])
+    }
 
 
 def get_tracker_data_from_event(event):
@@ -211,4 +204,5 @@ def lambda_handler(event, context):
         return {
             "statusCode": 404,
             "statusDescription": "404 Not Found",
+            "body": ""
         }
