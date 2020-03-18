@@ -53,6 +53,9 @@ def home(event, context):
     return {
         "statusCode": 200,
         "statusDescription": "200 OK",
+        "headers": {
+            "Content-Type": "text/html"
+        },
         "body": ""
     }
 
